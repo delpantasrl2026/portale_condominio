@@ -85,7 +85,7 @@ if not st.session_state.loggato:
 
 # --- SCHERMATA DOPO IL LOGIN ---
 else:
-    col1, col2 = st.columns()
+    col1, col2 = st.columns(2)
     with col2:
         if st.button("Esci 🚪"):
             st.session_state.loggato = False
