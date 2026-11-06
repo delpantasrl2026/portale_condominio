@@ -75,11 +75,11 @@ if not st.session_state.loggato:
         conn.close()
 
         if utente:
-            st.session_state.loggato = True
-            st.session_state.username = utente
-            st.session_state.ruolo = utente
-            st.session_state.interno = utente
-            st.rerun()
+         st.session_state.loggato = True
+         st.session_state.username = utente[0]
+         st.session_state.ruolo = utente[1]
+         st.session_state.interno = utente[2]
+         st.rerun()
         else:
             st.error("❌ Credenziali errate. Riprova.")
 
