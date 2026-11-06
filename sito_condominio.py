@@ -10,7 +10,7 @@ def genera_hash(password):
 
 
 def inizializza_database():
-    """Crea le tabelle e l'admin iniziale se non esistono nel cloud."""
+    """Crea le tabelle e l'admin iniziale se non esistono."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('''
@@ -41,7 +41,7 @@ def inizializza_database():
     conn.close()
 
 
-# Avviamo l'inizializzazione del database all'apertura della pagina
+# Avviamo l'inizializzazione del database
 inizializza_database()
 
 # --- INTERFACCIA GRAFICA WEB CON STREAMLIT ---
@@ -75,11 +75,11 @@ if not st.session_state.loggato:
         conn.close()
 
         if utente:
-         st.session_state.loggato = True
-         st.session_state.username = utente[0]
-         st.session_state.ruolo = utente[1]
-         st.session_state.interno = utente[2]
-         st.rerun()
+            st.session_state.loggato = True
+            st.session_state.username = utente[0]
+            st.session_state.ruolo = utente[1]
+            st.session_state.interno = utente[2]
+            st.rerun()
         else:
             st.error("❌ Credenziali errate. Riprova.")
 
@@ -140,7 +140,7 @@ else:
             cursor.execute(
                 "SELECT username FROM utenti WHERE ruolo = 'condomino'"
             )
-            lista_condomini = [r for r in cursor.fetchall()]
+            lista_condomini = [r[0] for r in cursor.fetchall()]
             conn.close()
 
             if not lista_condomini:
@@ -180,7 +180,10 @@ else:
             conn = sqlite3.connect(DB_NAME)
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT utenti.username, utenti.interno, consumi.mese, consumi.scatti_riscaldamento 
+                SELECT utenti.username AS Utente, 
+                       utenti.interno AS Interno, 
+                       consumi.mese AS Mese, 
+                       consumi.scatti_riscaldamento AS [Consumo (Scatti)]
                 FROM consumi 
                 JOIN utenti ON consumi.username = utenti.username
             """)
@@ -188,10 +191,7 @@ else:
             conn.close()
 
             if righe:
-                st.dataframe(
-                    righe,
-                    columns=["Username", "Interno", "Mese", "Consumo (Scatti)"],
-                )
+                st.dataframe(righe)
             else:
                 st.info("Nessun consumo inserito nel database.")
 
@@ -202,7 +202,7 @@ else:
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT mese, scatti_riscaldamento FROM consumi WHERE username = ? ORDER BY mese DESC",
+            "SELECT mese AS Mese, scatti_riscaldamento AS [Valore Letto (Scatti)] FROM consumi WHERE username = ? ORDER BY mese DESC",
             (st.session_state.username,),
         )
         record = cursor.fetchall()
@@ -212,6 +212,6 @@ else:
             st.write(
                 "Ecco lo storico delle letture relative al tuo riscaldamento:"
             )
-            st.dataframe(record, columns=["Mese di Riferimento", "Valore Letto"])
+            st.dataframe(record)
         else:
             st.info("ℹ️ Non ci sono ancora letture caricate per il tuo appartamento.")
