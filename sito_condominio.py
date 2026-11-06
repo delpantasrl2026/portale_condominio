@@ -16,8 +16,8 @@ def inizializza_database():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS utenti (
             username TEXT PRIMARY KEY,
-            password_hash TEXT NOT EXISTS,
-            ruolo TEXT NOT EXISTS,
+            password_hash TEXT NOT NULL,
+            ruolo TEXT NOT NULL,
             interno TEXT
         )
     ''')
