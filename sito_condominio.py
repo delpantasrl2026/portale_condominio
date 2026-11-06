@@ -9,14 +9,47 @@ def genera_hash(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
 
-# --- INTERFACCIA GRAFICA WEB CON STREAMLIT ---
+def inizializza_database():
+    """Crea le tabelle e l'admin iniziale se non esistono nel cloud."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS utenti (
+            username TEXT PRIMARY KEY,
+            password_hash TEXT NOT EXISTS,
+            ruolo TEXT NOT EXISTS,
+            interno TEXT
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS consumi (
+            username TEXT,
+            mese TEXT,
+            scatti_riscaldamento REAL,
+            PRIMARY KEY (username, mese),
+            FOREIGN KEY (username) REFERENCES utenti(username)
+        )
+    ''')
+    cursor.execute("SELECT * FROM utenti WHERE ruolo = 'admin'")
+    if not cursor.fetchone():
+        password_admin_default = genera_hash("admin2026")
+        cursor.execute(
+            "INSERT INTO utenti VALUES (?, ?, ?, ?)",
+            ("admin", password_admin_default, "admin", "Ufficio"),
+        )
+    conn.commit()
+    conn.close()
 
+
+# Avviamo l'inizializzazione del database all'apertura della pagina
+inizializza_database()
+
+# --- INTERFACCIA GRAFICA WEB CON STREAMLIT ---
 st.set_page_config(page_title="Portale Condominio", page_icon="🔥", layout="centered")
 
 st.title("🏢 Portale Riscaldamento Condominiale")
 st.write("Accedi per verificare i consumi del tuo appartamento.")
 
-# Creiamo lo stato della sessione per ricordare se l'utente ha fatto il login
 if "loggato" not in st.session_state:
     st.session_state.loggato = False
     st.session_state.username = ""
@@ -32,7 +65,6 @@ if not st.session_state.loggato:
     if st.button("Accedi"):
         hash_inserito = genera_hash(password_input)
 
-        # Controlliamo nel database esistente
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute(
@@ -44,17 +76,16 @@ if not st.session_state.loggato:
 
         if utente:
             st.session_state.loggato = True
-            st.session_state.username = utente[0]
-            st.session_state.ruolo = utente[1]
-            st.session_state.interno = utente[2]
-            st.rerun()  # Ricarica la pagina per mostrare il menu corretto
+            st.session_state.username = utente
+            st.session_state.ruolo = utente
+            st.session_state.interno = utente
+            st.rerun()
         else:
             st.error("❌ Credenziali errate. Riprova.")
 
 # --- SCHERMATA DOPO IL LOGIN ---
 else:
-    # Pulsante per uscire sempre visibile in alto a destra
-    col1, col2 = st.columns([4, 1])
+    col1, col2 = st.columns()
     with col2:
         if st.button("Esci 🚪"):
             st.session_state.loggato = False
@@ -104,13 +135,12 @@ else:
                     st.warning("Compila tutti i campi.")
 
         elif menu == "Inserisci Consumi":
-            # Recuperiamo la lista dei condomini per fare un menu a tendina
             conn = sqlite3.connect(DB_NAME)
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT username FROM utenti WHERE ruolo = 'condomino'"
             )
-            lista_condomini = [r[0] for r in cursor.fetchall()]
+            lista_condomini = [r for r in cursor.fetchall()]
             conn.close()
 
             if not lista_condomini:
@@ -158,7 +188,6 @@ else:
             conn.close()
 
             if righe:
-                # Mostriamo i dati in una comoda tabella web grafica
                 st.dataframe(
                     righe,
                     columns=["Username", "Interno", "Mese", "Consumo (Scatti)"],
